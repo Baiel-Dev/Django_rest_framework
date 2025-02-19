@@ -1,48 +1,40 @@
-from django.forms import model_to_dict
-from django.utils.autoreload import raise_last_exception
 from rest_framework import generics
-from django.shortcuts import render
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.pagination import PageNumberPagination
 from .models import Women
+from .permissions import IsAdminOrReadOnly
+from rest_framework.permissions import IsAuthenticated
 from .serializers import WomenSerializer
 
 
-class WomenAPIView(APIView):
-    def get(self, request):
-        w = Women.objects.all()
-        return Response({'posts': WomenSerializer(w, many=True).data})
 
-    def post(self, request):
-        serializer = WomenSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+class WomenAPIListPagination(PageNumberPagination):
+    page_size =2
+    page_size_query_param='page_size'
+    max_page_size = 1000
 
-        return Response({'post': serializer.data})
+class WomenAPIList(generics.ListCreateAPIView):
+    """
+    API для получения списка объектов и создания нового объекта Women.
+    """
+    queryset = Women.objects.all()
+    serializer_class = WomenSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    # pagination_class = WomenAPIListPagination
 
-
-    def put(self, request, *args, **kwargs):
-        pk = kwargs.get("pk", None)
-        if not pk:
-                return Response({"error":"Method PUT not allowed"})
-
-        try:
-            instance = Women.objects.get(pk=pk)
-        except:
-            return Response({"error": "Objects dose not exits"})
-
-        serializer = WomenSerializer(data=request.data, instance=instance)
-        serializer.is_valid(raise_exception = True)
-        serializer.save()
-        return Response({"post": serializer.data})
+class WomenAPIUpdate(generics.RetrieveUpdateAPIView):
+    """
+    API для получения объекта по ID и его обновления.
+    """
+    queryset = Women.objects.all()
+    serializer_class = WomenSerializer
+    permission_classes = [IsAuthenticated,]
 
 
-    def delete(self, request, *args, **kwargs):
-        pk = kwargs.get("pk", None)
-        if not pk:
-            return Response({"error": "Method Delete not allowed"})
-
-
-
-        return Response({"post": "delete post" +str(pk)})
+class WomenAPIDestroyView(generics.RetrieveDestroyAPIView):
+    """
+    API для получения объекта по ID и его удаления.
+    """
+    queryset = Women.objects.all()
+    serializer_class = WomenSerializer
+    permission_classes = (IsAdminOrReadOnly,)
